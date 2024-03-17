@@ -7,4 +7,3 @@ spacy==3.2.0  # For natural language processing tasks
 beautifulsoup4==4.10.0  # For web scraping
 transformers==4.11.3  # For BERT-based model
 flask==2.1.1  # For creating a web service
-unittest==0.0.2
