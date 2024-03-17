@@ -66,4 +66,4 @@ jobs:
         with:
           app-name: 'hacksustain'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_B2FA393A2F5F4133B5A758BDC4DE9DFF }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_1F9CA13412F44E9E8E47368E3C46DDB7 }}
