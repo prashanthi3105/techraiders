@@ -1,0 +1,24 @@
+name: Azure App Service
+
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+    addToPath: true
+
+- script: |
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+- task: AzureWebApp@1
+  inputs:
+    azureSubscription: '<Azure subscription>'
+    appName: '<App Service name>'
+    package: '$(System.DefaultWorkingDirectory)/**/*.zip'
+    startUpCommand: 'gunicorn -b :80 main:app'
