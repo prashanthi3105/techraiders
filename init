@@ -1,0 +1,77 @@
+import azure.functions as func
+import json, os, logging
+from azure.ai.formrecognizer import DocumentAnalysisClient
+from azure.core.credentials import AzureKeyCredential
+from openai import AzureOpenAI
+from shared.search_client import SearchClientWrapper   # optional
+
+endpoint = os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT")
+key      = os.getenv("DOCUMENT_INTELLIGENCE_KEY")
+search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
+search_key      = os.getenv("AZURE_SEARCH_KEY")
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        file = req.files['file']
+        if not file:
+            return func.HttpResponse("Missing file", status_code=400)
+
+        file_bytes = file.read()
+
+        # 1. OCR via Azure Document Intelligence
+        doc_client = DocumentAnalysisClient(endpoint, AzureKeyCredential(key))
+        poller = doc_client.begin_analyze_document("prebuilt-read", file_bytes)
+        result = poller.result()
+        text = " ".join([line.content for page in result.pages for line in page.lines])
+
+        # 2. Optional vector search for context (if index exists)
+        context = ""
+        if search_endpoint and search_key:
+            try:
+                search = SearchClientWrapper(search_endpoint, search_key)
+                hits = search.find_similar(text, top=3)
+                context = "\n".join(hits)
+            except Exception as ex:
+                logging.warning("Search failed: %s", ex)
+
+        # 3. GPT-4o-mini classification
+        openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        openai_key      = os.getenv("AZURE_OPENAI_KEY")
+        label, reason, conf = "Unknown", "No AI", 0.0
+        if openai_endpoint and openai_key:
+            client = AzureOpenAI(
+                azure_endpoint=openai_endpoint,
+                api_key=openai_key,
+                api_version="2024-05-01-preview"
+            )
+            prompt = f"""
+You are Swiss Re's records-compliance assistant.
+Classify the document as exactly one of: Record, Non-record, Knowledge-asset.
+Return JSON: {{"label":"...","confidence":0.XX,"reason":"..."}}
+
+Context snippets:
+{context}
+
+Document text (first 3000 chars):
+{text[:3000]}
+"""
+            resp = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role":"user","content":prompt}],
+                max_tokens=200,
+                temperature=0
+            )
+            data = json.loads(resp.choices[0].message.content.strip())
+            label  = data.get("label", "Unknown")
+            conf   = data.get("confidence", 0.0)
+            reason = data.get("reason", "No reason")
+
+        # 4. Return result
+        return func.HttpResponse(
+            json.dumps({"label":label,"confidence":conf,"reason":reason}),
+            mimetype="application/json"
+        )
+
+    except Exception as ex:
+        logging.exception(ex)
+        return func.HttpResponse(str(ex), status_code=500)
