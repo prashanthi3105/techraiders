@@ -1,59 +1,13 @@
-import os, json
-from azure.storage.blob import BlobServiceClient
-from azure.search.documents import SearchClient
-from azure.search.documents.indexes import SearchIndexClient
-from azure.search.documents.indexes.models import (
-    SearchIndex, SimpleField, SearchableField, SearchFieldDataType,
-    VectorSearch, VectorSearchAlgorithmConfiguration
-)
-from azure.core.credentials import AzureKeyCredential
-from openai import AzureOpenAI
-from dotenv import load_dotenv
-
-load_dotenv()
-
-blob_conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
-search_key = os.getenv("AZURE_SEARCH_KEY")
-container_name = "training-data"
-
-blob_service = BlobServiceClient.from_connection_string(blob_conn_str)
-container = blob_service.get_container_client(container_name)
-openai_client = AzureOpenAI(
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    api_key=os.getenv("AZURE_OPENAI_KEY"),
-    api_version="2024-05-01-preview"
-)
-
-# Create index
-index_name = "swissre-docs"
-index_client = SearchIndexClient(search_endpoint, AzureKeyCredential(search_key))
-fields = [
-    SimpleField(name="id", type=SearchFieldDataType.String, key=True),
-    SearchableField(name="content", type=SearchFieldDataType.String),
-    SearchableField(name="label", type=SearchFieldDataType.String),
-    SearchField(name="contentVector", type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
-                vector_search_dimensions=1536, vector_search_profile_name="hnsw")
-]
-vector_search = VectorSearch(
-    profiles=[{"name": "hnsw", "algorithm": "hnsw-algo"}],
-    algorithms=[{"name": "hnsw-algo", "kind": "hnsw"}]
-)
-index = SearchIndex(name=index_name, fields=fields, vector_search=vector_search)
-index_client.create_or_update_index(index)
-
-# Upload docs
-search_client = SearchClient(search_endpoint, index_name, AzureKeyCredential(search_key))
-docs = []
-for blob in container.list_blobs():
-    label = blob.name.split("/")[0]  # folder name
-    blob_client = container.get_blob_client(blob.name)
-    text = blob_client.download_blob().readall().decode("utf-8", errors="ignore")
-    vec = openai_client.embeddings.create(input=text, model="text-embedding-3-small").data[0].embedding
-    docs.append({"id": blob.name, "content": text, "label": label, "contentVector": vec})
-    if len(docs) >= 1000:  # batch upload
-        search_client.upload_documents(docs)
-        docs = []
-if docs:
-    search_client.upload_documents(docs)
-print("Index ready.")
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "DOCUMENT_INTELLIGENCE_ENDPOINT": "https://<region>.api.cognitive.microsoft.com/",
+    "DOCUMENT_INTELLIGENCE_KEY": "<key>",
+    "AZURE_SEARCH_ENDPOINT": "https://<search>.search.windows.net",
+    "AZURE_SEARCH_KEY": "<key>",
+    "AZURE_OPENAI_ENDPOINT": "https://<openai>.openai.azure.com/",
+    "AZURE_OPENAI_KEY": "<key>"
+  }
+}
