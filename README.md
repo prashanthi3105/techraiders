@@ -1,3 +1,9 @@
+
+curl -X POST http://localhost:7071/api/classify -F "file=@C:\Users\%USERNAME%\Desktop\test.docx"
+
+
+
+
 {
   "IsEncrypted": false,
   "Values": {
