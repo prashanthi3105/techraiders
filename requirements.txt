@@ -1,7 +1,1 @@
-What did Gummireddy do well from your perspective?
-Sharanya is a sincere and hardworking engineer. She completes the tasks given to her with commitment and focus. She has recently started working on the CCR Claims POC and is putting effort into understanding the work. She follows instructions well and tries to deliver what is expected. Overall, she performs her assigned tasks properly and shows willingness to learn and improve.
-
-⸻
-
-What could Gummireddy have done differently to change their impact?
-She can work on improving her application knowledge and debugging skills to get a deeper understanding of the CCR Claims application. The progress on the POC could have been better with more detailed code analysis and debugging. Also, her communication or explanation of the work can be clearer and more structured, with proper justification for her points. Being more proactive and taking extra steps to understand different parts of the application will help her make a stronger impact.
+test
