@@ -1,3 +1,35 @@
+
+Om Shanti
+D Knawledge gef
+2 Induidual IM → Poc for cattical roodules
+F7
+3 Areas that we are strong & gagk
+6
+* Release process...
+@ Prod support (pre/post) / Incidents
+* user/ process spacitic for 3 ARms
+* velocity maintanance
+8 capability matsta
+9) Risk mitigation - pan
+Action plan
+@ Team Readiness.
+→ Aceuto logs (all em
+3) Trace back all production issuese
+RCA + Resolution
+14) SP-TI+ JIRA Stories o module
+B mention that automation opic can be talen by S.R. TIm
+B SDET Shadowing test cases
+12 wohat sergey do? → check be declass what we know de dost knaco.
+Keep Thought, Word & Deed in Harmony.
+Mode
+&
+7
+Y
+U
+H
+N
+
+
 You are a senior Java developer and architect.
 
 I will provide a Jira ticket in JSON format.
