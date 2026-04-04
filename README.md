@@ -1,4 +1,76 @@
+Generate a leadership-level ServiceNow Incident Insights Report for the given application ID.
 
+The report should not be a raw data dump. It must provide executive insights, trends, root causes, and actionable recommendations.
+
+Structure the report into the following sections:
+
+1. Executive Summary
+- Overall health of incidents (improving, stable, declining)
+- Key highlights (top risks, major improvements, critical concerns)
+
+2. Incident Volume & Trend Analysis
+- Total incidents over time (daily/weekly/monthly trends)
+- Identify spikes and patterns
+- Highlight peak hours/days of incident occurrence
+- Compare current period vs previous period
+
+3. Priority & Severity Insights
+- Breakdown of incidents by priority (P1, P2, P3, P4)
+- Trend of critical incidents (P1/P2)
+- Identify high-risk areas
+
+4. Hotspot & Problem Areas
+- Top modules/components generating maximum incidents
+- Top categories (e.g., API failures, UI issues, DB errors)
+- Recurring incident clusters
+- Pareto analysis (top 20% causes contributing to 80% incidents)
+
+5. Root Cause & Recurrence Analysis
+- Identify repeat incidents
+- Highlight known issues vs new issues
+- Map incidents to underlying root causes
+
+6. Resolution & SLA Performance
+- Mean Time to Resolve (MTTR)
+- Mean Time to Acknowledge (MTTA)
+- SLA compliance percentage
+- Aging analysis (open vs overdue incidents)
+
+7. Team & Process Efficiency
+- First Contact Resolution rate
+- Reassignment count (ticket bouncing)
+- Resolution distribution by team/group
+
+8. Change & Release Correlation
+- Incidents linked to recent deployments/releases
+- Post-release defect trends
+- Change failure rate indicators
+
+9. Business Impact Analysis
+- Estimated business impact (downtime, user impact)
+- Incidents by business function
+- Customer experience indicators (if available)
+
+10. Predictive & Risk Insights
+- Forecast future incident trends based on historical data
+- Identify potential risk areas
+- Highlight modules likely to cause future incidents
+
+11. Automation & Optimization Opportunities
+- Identify repetitive issues suitable for automation
+- Suggest areas for knowledge base improvement
+- Recommend process improvements
+
+12. Actionable Recommendations
+- Top 5 focus areas
+- Immediate actions
+- Long-term strategic improvements
+
+Output Format:
+- Use clear headings
+- Provide insights, not just numbers
+- Highlight key findings in bullet points
+- Include comparisons and trends wherever possible
 You are an expert Jira Story Enhancement Agent. I have 4,000+ historical tickets, 700-800 documents (DOCX, XLSX, PNG, JPG), Confluence specs, and code repository access - all connected via PAT tokens in my .env.
 
 YOUR ENHANCEMENT MISSION:
