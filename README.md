@@ -1,3 +1,143 @@
+Kimi:  
+Here are the concrete, actionable steps to permanently fix the LHCLM SQL Server performance issue, organized by priority and who does what.
+----
+PERMANENT FIX — ACTION STEPS
+PHASE 0: IMMEDIATE STABILIZATION (Today — DBA Team)
+Step	Action	Command / Script	Validation
+0.1	Identify the good plan from Query Store history	Run diagnostic query A3 (from Appendix)	Note `plan_id` with lowest `avg_duration_ms`
+0.2	Force the good plan for CWPR003	`EXEC sys.sp_query_store_force_plan @query_id = <ID>, @plan_id = <GOOD_ID>;`	Check `sys.query_store_plan` — `is_forced_plan = 1`, `force_failure_count = 0`
+0.3	Force the good plan for LoadTaskWorkboxAction	Same as 0.2	Same validation
+0.4	Force the good plan for Advanced Search	Same as 0.2	Same validation
+0.5	Stop auto-stats on affected tables to break the recompile cycle	`UPDATE STATISTICS <WorkboxTable> WITH FULLSCAN, NORECOMPUTE;`	Verify `no_recompute = 1` in `sys.stats`
+0.6	Clear bad plans from cache	`DBCC FREEPROCCACHE;` (targeted if possible)	Re-run queries — should use forced plan immediately
+0.7	Monitor for 2 hours — verify stability	Run Query Store report every 15 min	`avg_duration_ms` should stay < 5000ms
+Owner: DBA Team
+Risk: Very Low
+Rollback: sp_query_store_unforce_plan + ALTER STATISTICS ... SET AUTO_UPDATE = ON
+----
+PHASE 1: ELIMINATE PARAMETER SNIFFING (Day 1–2 — Dev + DBA)
+Option A: OPTIMIZE FOR Hint (Recommended for LHCLM)
+Step	Action	Details
+1A.1	Modify `LoadTaskWorkboxAction` stored procedure	Add `OPTION (OPTIMIZE FOR (@Region = 'US', @MortalityType = 'Mortality'))` at end of SELECT
+1A.2	Modify CWPR003 stored procedure	Same hint with appropriate common values
+1A.3	Modify Advanced Search stored procedure	Same hint with appropriate common values
+1A.4	Deploy to ITE-S, test	Run with both US and small region parameters
+1A.5	Deploy to ITE-Q, test	Validate same
+1A.6	Deploy to PROD during maintenance window	Monitor Query Store for 4 hours post-deploy
+Why this: Optimizes for the 90% case. Small region queries run slightly slower but not catastrophically.
+Option B: Local Variable Assignment (If Option A rejected)
+Step	Action	Details
+1B.1	Add local variable declarations at top of each proc	`DECLARE @LocalRegion = @Region; DECLARE @LocalMortalityType = @MortalityType;`
+1B.2	Use local variables in WHERE clause	`WHERE Region = @LocalRegion AND MortalityType = @LocalMortalityType`
+1B.3	Deploy through same ITE-S → ITE-Q → PROD path	Same testing as 1A
+Why this: SQL Server cannot sniff local variables. Uses density vector (average) instead of histogram.
+Option C: RECOMPILE (Nuclear — only if execution frequency < 10/min)
+Step	Action	Details
+1C.1	Add `OPTION (RECOMPILE)` to affected queries	Fresh plan every execution
+1C.2	Monitor CPU impact for 24 hours	Check `sys.dm_exec_query_stats` for compile time
+Why this: Optimal plan for every parameter. Cost: CPU overhead from compilation.
+Owner: Application Development Team (code change) + DBA (deployment)
+Risk: Low (Option A/B), Medium (Option C)
+Rollback: Revert stored procedure to previous version
+----
+PHASE 2: ARCHITECTURE FIX FOR EXTREME SKEW (Week 1–2 — Dev Team)
+Step	Action	Details
+2.1	Implement parameter routing in application or stored procedure	`IF @Region IN ('US','CA') AND @MortalityType = 'Mortality' THEN run HighCardinalityPath ELSE run LowCardinalityPath`
+2.2	High cardinality path uses `WITH (INDEX = <IndexForLargeResult>)` or `OPTION (HASH JOIN)`	Explicitly optimized for millions of rows
+2.3	Low cardinality path uses `WITH (INDEX = <IndexForSmallResult>)` or `OPTION (LOOP JOIN)`	Explicitly optimized for hundreds of rows
+2.4	Deploy to ITE-S, test with all region combinations	Validate both paths perform well
+2.5	Deploy to ITE-Q, validate	Same
+2.6	Deploy to PROD	Monitor Query Store for plan stability
+Owner: Application Development Team
+Risk: Medium (requires application logic change)
+Rollback: Revert to single-path stored procedure
+----
+PHASE 3: DISABLE PSP OPTIMIZATION (If SQL Server 2022 — Day 1, DBA)
+Step	Action	Command	Validation
+3.1	Check if PSP is enabled	`SELECT name, value FROM sys.database_scoped_configurations WHERE name = 'PARAMETER_SENSITIVE_PLAN_OPTIMIZATION';`	Note current value
+3.2	If enabled and problematic, disable at query level	Add `OPTION (USE HINT('DISABLE_PARAMETER_SENSITIVE_PLAN_OPTIMIZATION'))` to affected procs	Monitor for plan count reduction in Query Store
+3.3	Alternative: disable at database level	`ALTER DATABASE SCOPED CONFIGURATION SET PARAMETER_SENSITIVE_PLAN_OPTIMIZATION = OFF;`	Test in ITE first
+Owner: DBA Team
+Risk: Low
+Rollback: ALTER DATABASE SCOPED CONFIGURATION SET PARAMETER_SENSITIVE_PLAN_OPTIMIZATION = ON;
+----
+PHASE 4: STANDARDIZE CONNECTION SETTINGS (Day 2, Dev + DBA)
+Step	Action	Details
+4.1	Add `SET ARITHABORT ON;` at top of all affected stored procedures	Eliminates plan cache isolation between SSMS and app
+4.2	Verify application connection string does not override with `ARITHABORT OFF`	Check Entity Framework or ADO.NET settings
+4.3	Document standard: all LHCLM procs must set `ARITHABORT ON`	Prevent future cache pollution
+Owner: Application Development Team
+Risk: Very Low
+Rollback: Remove SET ARITHABORT ON; from procedure
+----
+PHASE 5: STATISTICS MANAGEMENT PROTOCOL (Week 1, DBA)
+Step	Action	Details
+5.1	Create custom statistics maintenance job	Runs during maintenance window only (2 AM Sundays)
+5.2	Job must: update stats, then immediately check Query Store for plan changes	If new plan detected, force previous good plan
+5.3	Job must: use `PERSIST_SAMPLE_PERCENT = ON` to maintain histogram stability	Prevents sample size variation between updates
+5.4	Re-enable auto-stats (`NORECOMPUTE = OFF`) only after Phase 1–4 fixes are proven stable	Monitor for 2 weeks
+5.5	Document: stats updates are production changes requiring approval	Change control process
+Owner: DBA Team
+Risk: Low
+Rollback: Re-enable auto-stats immediately
+----
+PHASE 6: MONITORING & AUTOMATION (Week 2–3, DBA)
+Step	Action	Details
+6.1	Create SQL Agent job: `QueryStore_Regression_Monitor`	Runs every 15 minutes
+6.2	Job detects: `avg_duration` > 5x baseline for CWPR003, LoadTaskWorkboxAction, Advanced Search	Alerts DBA team via email/Teams
+6.3	Job auto-forces last known good plan if regression detected	`sp_query_store_force_plan` with last good `plan_id`
+6.4	Configure Query Store automatic plan correction	`ALTER DATABASE <DB> SET AUTOMATIC_TUNING (FORCE_LAST_GOOD_PLAN = ON);`
+6.5	Weekly review: Query Store "Regressed Queries" report	DBA reviews every Monday morning
+Owner: DBA Team
+Risk: Very Low
+Rollback: Disable job, unforce plans
+----
+PHASE 7: QUERY STORE HARDENING (Week 2, DBA)
+Step	Action	Command
+7.1	Increase Query Store retention	`ALTER DATABASE <DB> SET QUERY_STORE (MAX_STORAGE_SIZE_MB = 2048, STALE_QUERY_THRESHOLD_DAYS = 60);`
+7.2	Limit plan variants per query	`ALTER DATABASE <DB> SET QUERY_STORE (MAX_PLANS_PER_QUERY = 3);`
+7.3	Set capture mode to AUTO (not ALL)	`ALTER DATABASE <DB> SET QUERY_STORE (QUERY_CAPTURE_MODE = AUTO);`
+7.4	Verify Query Store is healthy weekly	Check `sys.database_query_store_options` for `actual_state_desc = 'READ_WRITE'`
+Owner: DBA Team
+Risk: Very Low
+----
+SUMMARY: WHO DOES WHAT BY WHEN
+Phase	Owner	Timeline	Key Deliverable
+0 — Force Plans + Stop Auto-Stats	DBA	Today	Stable PROD performance
+1 — Eliminate Parameter Sniffing	Dev + DBA	Day 1–2	Modified stored procedures with hints
+2 — Architecture Fix (Parameter Routing)	Dev	Week 1–2	IF/ELSE paths for high/low cardinality
+3 — Disable PSP (if needed)	DBA	Day 1	PSP disabled, verified
+4 — Standardize ARITHABORT	Dev	Day 2	All procs standardized
+5 — Statistics Protocol	DBA	Week 1	Custom maintenance job
+6 — Monitoring Automation	DBA	Week 2–3	Regression monitor job + alerts
+7 — Query Store Hardening	DBA	Week 2	Optimized Query Store config
+----
+ROLLBACK PLAN
+If This Happens	Do This
+Forced plan causes failures	`EXEC sp_query_store_unforce_plan @query_id = <ID>, @plan_id = <ID>;`
+OPTIMIZE FOR hint makes things worse	Revert stored procedure to previous version
+Parameter routing causes logic errors	Revert to single-path procedure
+PSP disablement breaks other queries	Re-enable PSP, use query-level hint only
+Auto-stats stop causes other issues	Re-enable immediately, monitor closely
+----
+SUCCESS CRITERIA
+Metric	Target	Measurement
+CWPR003 avg duration	< 5 seconds	Query Store `avg_duration`
+LoadTaskWorkboxAction avg duration	< 3 seconds	Query Store `avg_duration`
+Advanced Search avg duration	< 3 seconds	Query Store `avg_duration`
+Plan stability	1 plan per query for 7 days	`COUNT(DISTINCT plan_id) = 1`
+No regression after stats update	Duration variance < 2x	Compare before/after stats update
+SSMS vs App performance	Within 20% of each other	Manual timing test
+----
+Execute Phase 0 immediately. It requires zero code changes and will stabilize PROD today.
+
+
+
+
+
+hhhhhhhj
+
+
 Here are the concrete, actionable steps to permanently fix the LHCLM SQL Server performance issue, organized by priority and who does what.
 PERMANENT FIX — ACTION STEPS
 PHASE 0: IMMEDIATE STABILIZATION (Today — DBA Team)
