@@ -1,3 +1,31 @@
+During the discovery phase
+
+The team typically asks questions such as:
+
+* What is the current response time?
+* How many users use the application?
+* What are the peak transaction volumes?
+* What uptime is required?
+* What security and compliance standards must be met?
+* What browsers and devices need to be supported?
+* What are the backup and disaster recovery requirements?
+* What logging and monitoring capabilities are needed?
+
+Example for a Claims Management modernization
+
+Some sample NFRs might be:
+
+* API response time: < 300 ms for 95% of requests.
+* Support 5,000 concurrent users.
+* 99.95% availability.
+* OAuth2/OpenID Connect authentication.
+* Full audit logging of user actions.
+* Horizontal scalability in the cloud.
+* Zero critical security vulnerabilities before release.
+* Automated deployment through a CI/CD pipeline.
+
+These NFRs are as important as functional requirements because they determine whether the modernized application is fast, secure, reliable, and ready for production.
+
 For a technology modernization project, organizations typically follow a structured lifecycle from idea to production. The exact process varies, but the end-to-end flow usually looks like this:
 
 1. Initiation
