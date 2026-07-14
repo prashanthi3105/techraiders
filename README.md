@@ -1,3 +1,77 @@
+In a technology modernization project, discovery is the initial phase where the team understands the current system before deciding how to modernize it. The goal is to reduce risks and make informed decisions.
+
+Typical activities in the discovery phase include:
+
+* Understand the current application
+    * Business capabilities
+    * Existing architecture
+    * Technology stack
+    * Dependencies between services and applications
+* Analyze the codebase
+    * Code quality and complexity
+    * Technical debt
+    * Reusable vs. obsolete components
+* Gather requirements
+    * Business expectations
+    * Functional requirements
+    * Non-functional requirements (performance, security, scalability)
+* Identify integrations
+    * APIs
+    * Databases
+    * Third-party systems
+    * Authentication and authorization mechanisms
+* Assess infrastructure
+    * Current deployment model
+    * CI/CD pipelines
+    * Cloud readiness
+    * Monitoring and logging
+* Identify risks and constraints
+    * Legacy technologies
+    * Unsupported libraries
+    * Licensing issues
+    * Compliance and security requirements
+* Estimate effort
+    * Size the modernization work
+    * Prioritize features
+    * Identify quick wins
+    * Define milestones
+
+Deliverables from the discovery phase
+
+Typically, the team produces:
+
+* Current-state architecture
+* Target-state architecture
+* Application inventory
+* Gap analysis
+* Dependency map
+* Modernization strategy (e.g., rehost, replatform, refactor, rewrite)
+* High-level roadmap
+* Initial effort and cost estimates
+* Risk register
+
+Example for your project
+
+Based on what you’ve shared previously about your tech modernization pilot at Swiss Re, your discovery phase might involve:
+
+* Understanding the existing Jakarta EE/GWT application.
+* Identifying modules to migrate to React and Spring Boot.
+* Reviewing business workflows and API dependencies.
+* Assessing database usage and opportunities to remove UI label dependencies.
+* Identifying reusable services and common components.
+* Estimating the migration effort module by module.
+* Producing a phased modernization roadmap for the pilot.
+
+Discovery is essentially the phase where the team answers three key questions:
+
+1. Where are we today? (current state)
+2. Where do we want to be? (target architecture and capabilities)
+3. How do we get there? (migration strategy, roadmap, risks, and estimates)
+
+For engineering managers and architects, a thorough discovery phase is often the most important part of a modernization project because it lays the foundation for realistic planning, budgeting, and successful execution.
+
+
+
 This is actually a great realization. Many engineers focus primarily on code migration, but successful modernization projects require looking at the entire ecosystem. This is exactly how architects and engineering managers approach these initiatives.
 
 Here’s a comprehensive checklist you can use for almost any modernization project.
